@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teacher Cover</title>
+<style>
+  :root { --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --bg:#f9fafb; --card:#fff;
+          --accent:#2563eb; --accent-soft:#eff6ff; --red:#b91c1c; --red-soft:#fef2f2; --green:#15803d; --green-soft:#f0fdf4; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  main { max-width:1000px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  button { font:inherit; cursor:pointer; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink); padding:7px 12px; }
+  button:hover { border-color:#9ca3af; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .primary:hover { background:#1d4ed8; border-color:#1d4ed8; }
+  .danger { color:var(--red); border-color:#fecaca; background:var(--red-soft); }
+  .danger:hover { border-color:var(--red); }
+  .link { border:none; background:none; color:var(--accent); padding:4px 6px; text-decoration:underline; }
+  .drop { text-align:center; padding:28px 16px; border:2px dashed #cbd5e1; border-radius:12px; background:#fff; }
+  .drop.over { border-color:var(--accent); background:var(--accent-soft); }
+  .drop p { margin:0 0 12px; color:var(--muted); }
+  #msg { margin-top:12px; color:var(--red); }
+  .bar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; }
+  .tabs button { border-radius:99px; padding:6px 14px; font-weight:600; position:relative; }
+  .tabs button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .tabs button .dot { position:absolute; top:-3px; right:-3px; width:10px; height:10px; border-radius:50%; background:var(--red); border:2px solid var(--bg); }
+  .bar .file { color:var(--muted); margin-left:auto; }
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 4px; }
+  .tag.green { background:var(--green-soft); color:var(--green); }
+  .chips button.best { border-color:var(--green); color:var(--green); font-weight:600; }
+  .cols { display:grid; grid-template-columns:280px 1fr; gap:16px; align-items:start; }
+  @media (max-width:720px) { .cols { grid-template-columns:1fr; } }
+  .search { width:100%; font:inherit; padding:8px 10px; border:1px solid var(--line); border-radius:8px; margin-bottom:8px; }
+  #teachers { max-height:520px; overflow:auto; display:flex; flex-direction:column; gap:2px; }
+  #teachers button { text-align:left; border:none; border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; gap:8px; background:none; }
+  #teachers button:hover { background:#f3f4f6; }
+  #teachers button.sel { background:var(--accent-soft); color:var(--accent); font-weight:600; }
+  .tag { font-size:12px; font-weight:600; border-radius:99px; padding:1px 8px; white-space:nowrap; }
+  .tag.red { background:var(--red-soft); color:var(--red); }
+  h2 { font-size:18px; margin:0 0 2px; }
+  h3 { font-size:14px; margin:20px 0 8px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .empty { color:var(--muted); padding:8px 0; }
+  .session { border:1px solid var(--line); border-radius:10px; padding:12px; margin-top:10px; }
+  .session.cancelled { border-color:#fecaca; background:var(--red-soft); }
+  .session.covered { border-color:#bbf7d0; background:var(--green-soft); }
+  .row { display:flex; gap:12px; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; }
+  .when { font-size:13px; color:var(--muted); }
+  .what { white-space:pre-line; font-weight:500; }
+  .status { font-weight:600; }
+  .status.red { color:var(--red); } .status.green { color:var(--green); }
+  .free { margin-top:10px; padding-top:10px; border-top:1px solid #fecaca; }
+  .free p { margin:0 0 8px; font-weight:600; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chips button { border-radius:99px; background:#fff; }
+  .chips button:hover { border-color:var(--green); color:var(--green); }
+  .changes { width:100%; border-collapse:collapse; font-size:14px; }
+  .changes td { padding:8px 6px; border-top:1px solid var(--line); vertical-align:top; }
+  .changes .arrow { color:var(--muted); }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Teacher Cover</h1>
+  <p class="sub">Upload the schedule, pick the absent teacher, cancel the session, choose a replacement.</p>
+
+  <div id="upload" class="drop">
+    <p>Drop your Excel schedule here, or choose it from your computer.</p>
+    <button class="primary" id="pick">Choose Excel file</button>
+    <input id="file" type="file" accept=".xlsx,.xls,.xlsm" hidden>
+    <div id="msg" role="alert"></div>
+  </div>
+
+  <div id="work" hidden>
+    <div class="bar">
+      <div class="tabs" id="tabs" role="tablist" aria-label="Day"></div>
+      <span class="file" id="fname"></span>
+      <button class="link" id="change">Upload a different file</button>
+    </div>
+    <div class="when" id="daylabel" style="margin:-6px 0 12px"></div>
+    <div class="cols">
+      <div class="card">
+        <input class="search" id="search" type="search" placeholder="Find a teacher…" aria-label="Find a teacher">
+        <div id="teachers"></div>
+      </div>
+      <div class="card" id="detail"></div>
+    </div>
+    <div class="card" style="margin-top:16px" id="summary"></div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ---------- MODEL START ----------
+// rows: 2D array of strings. Layout: row 1 = day banners, row 2 = period names, row 3 = times,
+// then one row per teacher (name in column A). Columns B.. are time slots.
+var NON_TEACHING = ['morning lines', 'passing', 'nutrition', 'lunch'];
+
+function clean(v) { return String(v == null ? '' : v).replace(/\r/g, '').trim(); }
+
+function buildModel(rows) {
+  var banner = rows[0] || [], periods = rows[1] || [], times = rows[2] || [];
+  var width = Math.max(banner.length, periods.length, times.length);
+  var days = [], cur = null, label = '';
+  for (var c = 1; c < width; c++) {
+    var b = clean(banner[c]);
+    if (b) label = b;
+    var period = clean(periods[c]);
+    if (!period) continue;
+    if (!cur || cur.label !== label) { cur = { label: label || 'Schedule', cols: [] }; days.push(cur); }
+    if (NON_TEACHING.indexOf(period.toLowerCase()) !== -1) continue;
+    cur.cols.push({ ci: c, period: period, time: clean(times[c]) });
+  }
+  var teachers = [];
+  for (var r = 3; r < rows.length; r++) {
+    var name = clean(rows[r][0]);
+    if (!name) continue;
+    teachers.push({ name: name, cells: rows[r].map(clean) });
+  }
+  return { days: days.filter(function (d) { return d.cols.length; }), teachers: teachers };
+}
+
+// A cell holding only the slot's own label (e.g. "Flex") is a placeholder, not a class.
+function cellText(t, col) {
+  var v = t.cells[col.ci] || '';
+  return v.toLowerCase() === col.period.toLowerCase() ? '' : v;
+}
+function isBusy(t, col) { return cellText(t, col) !== ''; }
+
+// cancels: [{day, ci, t, by}]  (t, by are teacher indexes; by = null until chosen)
+function findCancel(cancels, day, ci, t) {
+  for (var i = 0; i < cancels.length; i++) { var x = cancels[i]; if (x.day === day && x.ci === ci && x.t === t) return x; }
+  return null;
+}
+function freeTeachers(model, cancels, day, col, absentIdx) {
+  var out = [];
+  model.teachers.forEach(function (t, i) {
+    if (i === absentIdx || isBusy(t, col)) return;
+    var covering = cancels.some(function (x) { return x.day === day && x.ci === col.ci && x.by === i; });
+    if (!covering) out.push(i);
+  });
+  return out;
+}
+// Subject of a class cell, e.g. "Arabic Lang & Lit 9 [25]\nRoom 318" -> "arabic"
+function deptOf(text) {
+  var lines = String(text || '').split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var l = lines[i].trim().toLowerCase();
+    if (l && l.indexOf('extension') !== 0 && l.indexOf('room') !== 0) return l.split(' ')[0];
+  }
+  return '';
+}
+function depts(t) {
+  if (!t._d) { t._d = {}; t.cells.forEach(function (v, i) { if (i > 0 && v.indexOf('\n') !== -1) t._d[deptOf(v)] = 1; }); }
+  return t._d;
+}
+// Free teachers, best first: same subject as the absent class, then fewest covers already that day.
+function rankFree(model, cancels, day, col, absentIdx) {
+  var dept = deptOf(cellText(model.teachers[absentIdx], col));
+  function load(i) { return cancels.filter(function (x) { return x.day === day && x.by === i; }).length; }
+  return freeTeachers(model, cancels, day, col, absentIdx).map(function (i) {
+    return { i: i, same: !!(dept && depts(model.teachers[i])[dept]), load: load(i) };
+  }).sort(function (a, b) { return (b.same - a.same) || (a.load - b.load) || (a.i - b.i); });
+}
+// ---------- MODEL END ----------
+
+if (typeof document !== 'undefined') (function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var model = null, dayIdx = 0, selected = null, cancels = [], openPicker = null;
+
+  function el(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    for (var k in (attrs || {})) {
+      if (k === 'class') n.className = attrs[k];
+      else if (k === 'text') n.textContent = attrs[k];
+      else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), attrs[k]);
+      else n.setAttribute(k, attrs[k]);
+    }
+    (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
+  }
+  function nice(name) { // "Last, First" -> shown as in the file
+    return name;
+  }
+
+  // ----- upload -----
+  $('pick').onclick = function () { $('file').click(); };
+  $('change').onclick = function () { $('file').value = ''; $('file').click(); };
+  $('file').onchange = function (e) { if (e.target.files[0]) load(e.target.files[0]); };
+  var drop = $('upload');
+  ['dragover', 'dragenter'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (ev) { drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('over'); }); });
+  drop.addEventListener('drop', function (e) { if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+
+  function load(file) {
+    $('msg').textContent = '';
+    if (typeof XLSX === 'undefined') { $('msg').textContent = 'The Excel reader could not load. Check your connection and reload the page.'; return; }
+    var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var wb = XLSX.read(rd.result, { type: 'array' });
+        var ws = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '', blankrows: true });
+        // spread merged cells below the header so every covered cell carries its value
+        (ws['!merges'] || []).forEach(function (m) {
+          if (m.s.r < 3) return;
+          var v = (rows[m.s.r] || [])[m.s.c];
+          for (var r = m.s.r; r <= m.e.r; r++) for (var c = m.s.c; c <= m.e.c; c++) { rows[r] = rows[r] || []; rows[r][c] = v; }
+        });
+        var m = buildModel(rows);
+        if (!m.teachers.length || !m.days.length) throw new Error('empty');
+        model = m; cancels = []; selected = null; dayIdx = 0; openPicker = null;
+        $('fname').textContent = file.name;
+        $('upload').hidden = true; $('work').hidden = false;
+        render();
+      } catch (err) {
+        $('msg').textContent = 'Could not read this file. It needs teacher names in column A and time slots across the top.';
+      }
+    };
+    rd.readAsArrayBuffer(file);
+  }
+
+  $('search').oninput = renderList;
+
+  // ----- render -----
+  function render() { renderTabs(); renderList(); renderDetail(); renderSummary(); }
+
+  function renderTabs() {
+    var box = $('tabs'); box.textContent = '';
+    model.days.forEach(function (d, i) {
+      var m = d.label.match(/DAY\s*(\d+)/i);
+      var has = cancels.some(function (x) { return x.day === i; });
+      box.appendChild(el('button', { class: i === dayIdx ? 'on' : '', role: 'tab', 'aria-selected': i === dayIdx, title: d.label,
+        onclick: function () { dayIdx = i; render(); } },
+        [el('span', { text: m ? 'Day ' + m[1] : d.label }), has ? el('span', { class: 'dot' }) : null]));
+    });
+    $('daylabel').textContent = model.days[dayIdx].label.replace(/\s*·\s*PowerSchool.*$/, '');
+  }
+
+  function absentTeacherDay(ti) {
+    var day = model.days[dayIdx];
+    day.cols.forEach(function (col) {
+      if (isBusy(model.teachers[ti], col) && !findCancel(cancels, dayIdx, col.ci, ti)) cancels.push({ day: dayIdx, ci: col.ci, t: ti, by: null });
+    });
+  }
+  function backDay(ti) {
+    cancels = cancels.filter(function (x) { return !(x.day === dayIdx && x.t === ti); });
+  }
+  function autoAssign(ti) {
+    var day = model.days[dayIdx];
+    day.cols.forEach(function (col) {
+      var c = findCancel(cancels, dayIdx, col.ci, ti);
+      if (c && c.by == null) { var r = rankFree(model, cancels, dayIdx, col, ti); if (r.length) c.by = r[0].i; }
+    });
+  }
+
+  function absentCount(ti) { return cancels.filter(function (x) { return x.day === dayIdx && x.t === ti; }).length; }
+
+  function renderList() {
+    var q = $('search').value.trim().toLowerCase(), box = $('teachers');
+    box.textContent = '';
+    model.teachers.forEach(function (t, i) {
+      if (q && t.name.toLowerCase().indexOf(q) === -1) return;
+      var n = absentCount(i);
+      box.appendChild(el('button', { class: i === selected ? 'sel' : '', onclick: function () { selected = i; openPicker = null; render(); } },
+        [el('span', { text: nice(t.name) }), n ? el('span', { class: 'tag red', text: 'absent' }) : null]));
+    });
+    if (!box.firstChild) box.appendChild(el('div', { class: 'empty', text: 'No match.' }));
+  }
+
+  function classText(t, col) { return cellText(t, col) || ''; }
+
+  function renderDetail() {
+    var d = $('detail'), day = model.days[dayIdx];
+    d.textContent = '';
+    if (selected == null) { d.appendChild(el('div', { class: 'empty', text: 'Select a teacher on the left.' })); return; }
+    var t = model.teachers[selected];
+    d.appendChild(el('h2', { text: t.name }));
+    d.appendChild(el('div', { class: 'when', text: day.label }));
+
+    var mine = day.cols.filter(function (c) { return isBusy(t, c); });
+    if (!mine.length) d.appendChild(el('div', { class: 'empty', text: 'No sessions on this day.' }));
+    else {
+      var mc = mine.map(function (c) { return findCancel(cancels, dayIdx, c.ci, selected); });
+      var nCancel = mc.filter(Boolean).length, nOpen = mc.filter(function (c) { return c && c.by == null; }).length;
+      var act = el('div', { class: 'actions' });
+      if (nCancel < mine.length) act.appendChild(el('button', { class: 'danger', text: 'Absent all day', onclick: function () { absentTeacherDay(selected); render(); } }));
+      if (nOpen) act.appendChild(el('button', { class: 'primary', text: 'Auto-assign replacements', onclick: function () { autoAssign(selected); render(); } }));
+      if (nCancel) act.appendChild(el('button', { text: 'Teacher is present', onclick: function () { backDay(selected); render(); } }));
+      d.appendChild(act);
+      d.appendChild(el('div', { class: 'when', text: nCancel ? '' : 'Cancel one session, or the whole day.' }));
+    }
+    mine.forEach(function (col) {
+      var c = findCancel(cancels, dayIdx, col.ci, selected);
+      var s = el('div', { class: 'session' + (c ? (c.by != null ? ' covered' : ' cancelled') : '') });
+      var left = el('div', {}, [
+        el('div', { class: 'when', text: col.period + '  ·  ' + col.time }),
+        el('div', { class: 'what', text: classText(t, col) })
+      ]);
+      var right = el('div', {});
+      if (!c) {
+        right.appendChild(el('button', { class: 'danger', text: 'Cancel', onclick: function () {
+          cancels.push({ day: dayIdx, ci: col.ci, t: selected, by: null }); openPicker = col.ci; render(); } }));
+      } else if (c.by == null) {
+        right.appendChild(el('span', { class: 'status red', text: 'Absent' }));
+        right.appendChild(el('button', { class: 'link', text: 'Undo', onclick: function () { undo(c); } }));
+      } else {
+        right.appendChild(el('span', { class: 'status green', text: 'Covered by ' + model.teachers[c.by].name }));
+        right.appendChild(el('button', { class: 'link', text: 'Change', onclick: function () { c.by = null; openPicker = col.ci; render(); } }));
+        right.appendChild(el('button', { class: 'link', text: 'Undo', onclick: function () { undo(c); } }));
+      }
+      s.appendChild(el('div', { class: 'row' }, [left, right]));
+
+      if (c && c.by == null) {
+        var free = rankFree(model, cancels, dayIdx, col, selected);
+        var box = el('div', { class: 'free' });
+        box.appendChild(el('p', { text: free.length ? 'Free at ' + col.time + ' (' + free.length + '). Choose a replacement:' : 'No teachers are free at ' + col.time + '.' }));
+        var chips = el('div', { class: 'chips' });
+        free.forEach(function (f, n) {
+          chips.appendChild(el('button', { class: f.same ? 'best' : '', title: f.same ? 'Teaches the same subject' : '',
+            text: model.teachers[f.i].name + (f.same ? ' ★' : ''), onclick: function () { c.by = f.i; openPicker = null; render(); } }));
+        });
+        if (free.some(function (f) { return f.same; })) box.appendChild(el('div', { class: 'when', text: '★ teaches the same subject; listed first, then those with the fewest covers today.' }));
+        box.appendChild(chips);
+        s.appendChild(box);
+      }
+      d.appendChild(s);
+    });
+
+    var cover = cancels.filter(function (x) { return x.day === dayIdx && x.by === selected; });
+    if (cover.length) {
+      d.appendChild(el('h3', { text: 'Covering today' }));
+      cover.forEach(function (x) {
+        var col = day.cols.filter(function (cc) { return cc.ci === x.ci; })[0];
+        d.appendChild(el('div', { class: 'session covered' }, [
+          el('div', { class: 'when', text: col.period + '  ·  ' + col.time }),
+          el('div', { class: 'what', text: classText(model.teachers[x.t], col) }),
+          el('div', { class: 'when', text: 'Instead of ' + model.teachers[x.t].name })
+        ]));
+      });
+    }
+  }
+
+  function undo(c) { cancels.splice(cancels.indexOf(c), 1); render(); }
+
+  function renderSummary() {
+    var s = $('summary'), day = model.days[dayIdx];
+    s.textContent = '';
+    s.appendChild(el('h2', { text: 'Changes for this day' }));
+    var list = cancels.filter(function (x) { return x.day === dayIdx; });
+    if (!list.length) { s.appendChild(el('div', { class: 'empty', text: 'No cancelled sessions yet.' })); return; }
+    list.sort(function (a, b) { return a.ci - b.ci; });
+    var tb = el('table', { class: 'changes' });
+    list.forEach(function (x) {
+      var col = day.cols.filter(function (cc) { return cc.ci === x.ci; })[0];
+      tb.appendChild(el('tr', {}, [
+        el('td', { text: col.period + ' · ' + col.time }),
+        el('td', { class: 'what', text: classText(model.teachers[x.t], col) }),
+        el('td', { text: model.teachers[x.t].name }),
+        el('td', { class: 'arrow', text: '→' }),
+        el('td', { class: x.by == null ? 'status red' : 'status green', text: x.by == null ? 'Needs replacement' : model.teachers[x.by].name })
+      ]));
+    });
+    s.appendChild(tb);
+  }
+})();
+</script>
+</body>
+</html>
